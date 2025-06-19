@@ -19,6 +19,12 @@
 			href="https://unpkg.com/aos@2.3.1/dist/aos.css"
 			rel="stylesheet"
 		/>
+
+		<link
+			rel="stylesheet"
+			href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+		/>
+
 		<style>
 			* {
 				margin: 0;
@@ -1152,7 +1158,7 @@
 							<h3 style="margin-top: 1rem">📞 Call Us</h3>
 							<p>(555) 123-LASH</p>
 							<h3 style="margin-top: 1rem">⏰ Hours</h3>
-							<p>Mon-Sat: 9AM-7PM<br />Sunday: 10AM-5PM</p>
+							<p>Thursday: 10pm - 1am<br />Friday: 3pm - 1am</p>
 						</div>
 					</div>
 					<div
@@ -1168,7 +1174,14 @@
 							Thank you! Your booking request has been submitted. We'll contact you within 24 hours to confirm your appointment.
 						</div>
 						<h3>Book Your Appointment</h3>
-						<form id="bookingForm">
+
+						<form
+							class="fs-form fs-layout__2-column"
+							target="_top"
+							method="POST"
+							id="bookingForm"
+							netlify
+						>
 							<div class="form-group">
 								<label for="name">Full Name *</label>
 								<input
@@ -1204,18 +1217,20 @@
 									required
 								>
 									<option value="">Select a service</option>
-									<option value="extensions">Eyelash Extensions - $120+</option>
-									<option value="lift">Lash Lift - $80</option>
-									<option value="tinting">Lash Tinting - $45</option>
-									<option value="package">Full Lash Package - $150</option>
+									<option value="Eyelash Extension">Eyelash Extensions - $120+</option>
+									<option value="Lash Lift">Lash Lift - $80</option>
+									<option value="Last Tinting">Lash Tinting - $45</option>
+									<option value="Full Lash Package">Full Lash Package - $150</option>
 								</select>
 							</div>
 							<div class="form-group">
 								<label for="date">Preferred Date</label>
 								<input
-									type="date"
+									type="text"
 									id="date"
 									name="date"
+									placeholder="Choose your preferred day"
+									required
 								/>
 							</div>
 							<div class="form-group">
@@ -1304,8 +1319,7 @@
 						data-aos-delay="300"
 					>
 						<h3>Hours</h3>
-						<p>Monday - Saturday<br />9:00 AM - 7:00 PM</p>
-						<p>Sunday<br />10:00 AM - 5:00 PM</p>
+						<p>Thursday: 10pm - 1am<br />Friday: 3pm - 1am</p>
 					</div>
 				</div>
 				<div class="footer-bottom">
@@ -1316,6 +1330,8 @@
 
 		<!-- AOS Library -->
 		<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 		<script>
 			// Initialize AOS
 			AOS.init({
@@ -1428,53 +1444,106 @@
 
 			window.addEventListener('scroll', requestParallaxUpdate);
 
+			// Date picker
+			flatpickr('#date', {
+				dateFormat: 'F j, Y',
+				minDate: 'today',
+				disable: [
+					function (date) {
+						// Enable only Thursday (4) and Friday (5)
+						return !(date.getDay() === 4 || date.getDay() === 5);
+					},
+				],
+				onChange: function (selectedDates, dateStr, instance) {
+					const selectedDay = selectedDates[0].getDay();
+					const timeSelect = document.getElementById('time');
+
+					const times = {
+						4: [
+							// Thursday: 10PM–1AM
+							{ value: '22:00', label: '10:00 PM' },
+							{ value: '23:00', label: '11:00 PM' },
+							{ value: '00:00', label: '12:00 AM' },
+							{ value: '01:00', label: '1:00 AM' },
+						],
+						5: [
+							// Friday: 3PM–1AM
+							{ value: '15:00', label: '3:00 PM' },
+							{ value: '16:00', label: '4:00 PM' },
+							{ value: '17:00', label: '5:00 PM' },
+							{ value: '18:00', label: '6:00 PM' },
+							{ value: '19:00', label: '7:00 PM' },
+							{ value: '20:00', label: '8:00 PM' },
+							{ value: '21:00', label: '9:00 PM' },
+							{ value: '22:00', label: '10:00 PM' },
+							{ value: '23:00', label: '11:00 PM' },
+							{ value: '00:00', label: '12:00 AM' },
+							{ value: '01:00', label: '1:00 AM' },
+						],
+					};
+
+					timeSelect.innerHTML = '<option value="">Select time</option>';
+
+					if (times[selectedDay]) {
+						times[selectedDay].forEach((t) => {
+							const option = document.createElement('option');
+							option.value = t.value;
+							option.textContent = t.label;
+							timeSelect.appendChild(option);
+						});
+					}
+				},
+			});
+
 			// Form submission
 			document.getElementById('bookingForm').addEventListener('submit', function (e) {
 				e.preventDefault();
 
+				const form = this;
+				const submitBtn = form.querySelector('.submit-btn');
+				const originalText = submitBtn.textContent;
+
+				// Set loading state
+				submitBtn.textContent = 'Processing...';
+				submitBtn.disabled = true;
+
 				// Get form data
-				const formData = new FormData(this);
-				const data = Object.fromEntries(formData);
+				const formData = new FormData(form);
+				const formspreeEndpoint = 'https://formspree.io/f/mldnlvqr';
 
-				// Simulate form submission (replace with actual backend integration)
-				console.log('Booking data:', data);
+				// Submit via AJAX
+				fetch(formspreeEndpoint, {
+					method: 'POST',
+					body: formData,
+					headers: {
+						Accept: 'application/json',
+					},
+				})
+					.then((response) => {
+						if (response.ok) {
+							// Success UI
+							document.getElementById('successMessage').style.display = 'block';
+							form.reset();
+						} else {
+							return response.json().then((data) => {
+								throw new Error(data.error || 'Form submission failed.');
+							});
+						}
+					})
+					.catch((error) => {
+						console.error('Form submission error:', error.message);
+						alert('Something went wrong. Please try again.');
+					})
+					.finally(() => {
+						// Reset button state
+						submitBtn.textContent = originalText;
+						submitBtn.disabled = false;
 
-				// Show success message
-				document.getElementById('successMessage').style.display = 'block';
-
-				// Reset form
-				this.reset();
-
-				// Scroll to success message
-				document.getElementById('successMessage').scrollIntoView({
-					behavior: 'smooth',
-					block: 'center',
-				});
-
-				// Hide success message after 5 seconds
-				setTimeout(() => {
-					document.getElementById('successMessage').style.display = 'none';
-				}, 5000);
-			});
-
-			// Set minimum date to today
-			const today = new Date().toISOString().split('T')[0];
-			document.getElementById('date').setAttribute('min', today);
-
-			// Add loading animation to buttons
-			document.querySelectorAll('.btn-primary, .btn-secondary, .book-btn, .submit-btn').forEach((btn) => {
-				btn.addEventListener('click', function () {
-					if (this.type === 'submit') {
-						const originalText = this.textContent;
-						this.textContent = 'Processing...';
-						this.disabled = true;
-
+						// Auto-hide message after 5 sec
 						setTimeout(() => {
-							this.textContent = originalText;
-							this.disabled = false;
-						}, 2000);
-					}
-				});
+							document.getElementById('successMessage').style.display = 'none';
+						}, 5000);
+					});
 			});
 
 			// Refresh AOS on window resize
